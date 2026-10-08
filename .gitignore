@@ -218,3 +218,31 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Legal Markdown Organizer: local documents, secrets and editor settings
+# Local data and Obsidian settings (keep fictional examples/ tracked)
+.obsidian/
+.trash/
+vaults/
+local-vault/
+legal-notes/
+private/
+personal/
+confidential/
+local-data/
+backups/
+*.bak
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
