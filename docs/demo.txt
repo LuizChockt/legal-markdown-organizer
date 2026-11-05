@@ -1,0 +1,17 @@
+[DRY RUN]
+
+agravo_instrumento.md
+-> Agravos/agravo_instrumento.md
+
+despacho.md
+-> Despachos/despacho.md
+
+recurso_especial.md
+-> Recursos/recurso_especial.md
+
+Despachos: 1
+Agravos: 1
+Recursos: 1
+
+3 files would be organized.
+No files were modified.
