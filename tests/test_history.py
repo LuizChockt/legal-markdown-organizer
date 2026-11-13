@@ -33,6 +33,7 @@ def manifest_path(directory: Path) -> Path:
 def test_manifest_records_relative_paths_hashes_identity_and_version(tmp_path: Path) -> None:
     source = write_document(tmp_path)
     result = organize_directory(tmp_path)
+    assert not result.errors, result.errors
     run = get_history(tmp_path)[0]
     assert run.id == result.run_id and len(run.id) == 32
     assert run.status == "completed" and run.version == "0.2.0" and run.schema == 1

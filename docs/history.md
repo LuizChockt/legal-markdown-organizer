@@ -66,6 +66,10 @@ For each document, the program:
 4. Atomically saves and synchronizes the `copied` checkpoint before removing the
    source. Only then does it record `moved` and count a successful movement.
 
+On Windows, timestamps are applied through `SetFileTime` on the already-open
+destination handle, without reopening its path or requiring a newer Python's
+`utime` capabilities.
+
 JSON updates use a new, exclusively created temporary file, `fsync` and atomic
 replacement. POSIX directories are synchronized as well. Windows has no portable
 directory-fsync equivalent. A journal write failure stops the whole execution.

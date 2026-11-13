@@ -201,5 +201,24 @@ class SafeRoot:
             os.fchmod(target.fileno(), stat.S_IMODE(source_info.st_mode) & 0o777)
             os.utime(target.fileno(), ns=(source_info.st_atime_ns, source_info.st_mtime_ns))
         else:
-            self.stat(path)
-            os.utime(path, ns=(source_info.st_atime_ns, source_info.st_mtime_ns), follow_symlinks=False)
+            # Windows does not implement utime(..., follow_symlinks=False) on
+            # every supported Python. Set times on our already-open target
+            # handle instead of reopening a potentially replaced pathname.
+            import ctypes
+            import msvcrt
+            from ctypes import wintypes
+
+            set_file_time = ctypes.WinDLL("kernel32", use_last_error=True).SetFileTime
+            pointer = ctypes.POINTER(wintypes.FILETIME)
+            set_file_time.argtypes = [wintypes.HANDLE, pointer, pointer, pointer]
+            set_file_time.restype = wintypes.BOOL
+
+            def file_time(nanoseconds: int) -> wintypes.FILETIME:
+                # FILETIME counts 100 ns ticks since 1601, not Unix's 1970 epoch.
+                ticks = nanoseconds // 100 + 116444736000000000
+                return wintypes.FILETIME(ticks & 0xFFFFFFFF, ticks >> 32)
+
+            access = file_time(source_info.st_atime_ns)
+            modified = file_time(source_info.st_mtime_ns)
+            if not set_file_time(msvcrt.get_osfhandle(target.fileno()), None, ctypes.byref(access), ctypes.byref(modified)):
+                raise ctypes.WinError(ctypes.get_last_error())
