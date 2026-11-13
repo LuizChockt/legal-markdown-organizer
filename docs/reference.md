@@ -22,6 +22,7 @@ small, deterministic and understandable by beginner/intermediate Python develope
 - Optional simple YAML front matter with `type` taking priority.
 - A read-only `--dry-run` preview, including conflict suffixes.
 - Numbered filenames protect existing documents from overwrites.
+- Local JSON execution history and `--undo-last`, with a read-only undo preview.
 - Original document bytes, filenames, front matter, headings, tags and wikilinks
   are preserved; only a conflicting destination requires a filename suffix.
 - Local processing, type hints, pytest tests and GitHub Actions.
@@ -288,15 +289,19 @@ Agravos/agravo_instrumento_2.md
 Files, directories and symlinks occupying a destination name all reserve it.
 Exclusive binary creation prevents overwriting even if a file appears after
 planning. The organizer copies the original bytes, preserves available file
-metadata with `shutil.copystat`, and removes the source only after the copy
-finishes. If copying fails, the source is retained and the partial target is
-removed when possible. If removing the source fails, both complete copies are
-retained and the error is reported; inspect these copies before retrying.
+modification time and POSIX permission bits through confined file handles, and
+removes the source only after hashing and durably recording the verified copy.
+If copying fails, the source is retained and the partial target is removed only
+when its ownership is still proven. If removing the source fails, both complete
+copies are retained and the error is reported. Undo can clean the verified
+duplicate when both recorded copies are unchanged.
 
 Keep a backup and close document editors before organizing a working base.
-This version has no undo command or protection against external edits made
-during a move. Source file symlinks are skipped, and category-directory symlinks
-are rejected.
+Use `--history`, `--undo-last --dry-run` and `--undo-last` to inspect and reverse
+the latest pending execution. Source symlinks are skipped; category/history
+symlinks and Windows reparse points are rejected. File identities, timestamps
+and SHA-256 detect ordinary edits/replacements. Incomplete runs block new
+organization until reviewed. [Format, recovery and limits](history.md).
 
 ## Dry-run mode
 
@@ -358,9 +363,12 @@ a copy of your vault; preservation of text does not guarantee link resolution.
 legal-markdown-organizer/
 ├── legal_organizer/
 │   ├── __init__.py
+│   ├── __main__.py
 │   ├── cli.py
 │   ├── classifier.py
+│   ├── filesystem.py
 │   ├── frontmatter.py
+│   ├── history.py
 │   ├── organizer.py
 │   └── rules.py
 ├── tests/
@@ -384,9 +392,12 @@ legal-markdown-organizer/
 ```
 
 `rules.py` defines the policy; `frontmatter.py` only extracts simple metadata;
-`classifier.py` normalizes and classifies; `organizer.py` handles traversal,
-safe moves, dry-run and statistics; `cli.py` owns arguments and output.
-One small dataclass carries the results between the organizer and CLI.
+`classifier.py` normalizes and classifies; `filesystem.py` confines access and
+verifies fingerprints; `history.py` validates/persists JSON and owns process
+locks; `organizer.py` coordinates organization, undo and recovery; `cli.py`
+owns arguments and output. Dataclasses carry manifests, transfer checkpoints
+and results. `__main__.py` exposes the same CLI to installed Windows users
+without requiring the Scripts directory on PATH.
 
 ## Running tests
 
@@ -417,7 +428,10 @@ in its path.
 
 The workflow in [`.github/workflows/tests.yml`](../.github/workflows/tests.yml)
 runs on `push` and `pull_request`, installs `.[dev]` and executes pytest on
-Windows, macOS and Ubuntu with Python 3.11 and 3.14. It uses the official
+Windows, macOS and Ubuntu with Python 3.11 and 3.14, plus Python 3.12 and 3.13 on
+Ubuntu. Every job also installs and exercises a built wheel outside the checkout.
+Tests include history, undo conflicts, partial failures, unsafe paths, edited
+files and hard process exits before/after deletion. It uses the official
 [checkout](https://github.com/actions/checkout) and
 [setup-python](https://github.com/actions/setup-python) actions.
 
@@ -430,6 +444,8 @@ The application makes no API requests, uses no cloud service and does not send
 documents for external analysis or store them outside the selected base. There
 is no telemetry or external database. CLI output includes filenames and local
 paths, so treat saved terminal output according to your own confidentiality needs.
+Local `.legal-organizer/` manifests also contain private filenames and hashes;
+keep them out of version control. They contain no document body text.
 
 All files in `examples/` and all test fixtures are fictional. They contain no
 real clients, parties, lawsuit numbers or confidential legal documents.
@@ -448,8 +464,10 @@ it does not identify confidential files placed elsewhere.
 - Only simple UTF-8 front matter scalar pairs are supported.
 - Keyword priority may need adjustment for a particular naming convention.
 - Moves are handled per file, without a transaction for the whole directory.
-- No undo; concurrent edits, power loss and filesystem metadata differences
-  require ordinary backups and care when organizing important originals.
+- Undo cannot restore modified/replaced/missing files, overwrite originals or
+  recover without valid local manifests. Empty category folders are retained.
+- Concurrent editors, power loss, unusual filesystems and platform-specific
+  metadata differences still require backups. See [recovery limits](history.md).
 
 ## Roadmap
 
@@ -457,7 +475,7 @@ Possible future improvements, **not implemented in this version**:
 
 - Recursive folder scanning.
 - Configurable rules in TOML or JSON.
-- Undo command.
+- Selecting an execution by ID and richer recovery diagnostics.
 - Custom categories from user configuration.
 - Extraction of Brazilian CNJ lawsuit numbers.
 - Automatic process folder creation.
