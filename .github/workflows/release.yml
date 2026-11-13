@@ -52,12 +52,4 @@ jobs:
       - name: Create immutable tag and publish release
         if: steps.guard.outputs.publish == 'true'
         shell: bash
-        run: |
-          existing="$(gh api "repos/$GH_REPO/git/ref/tags/v0.2.0" --jq '.object.sha' 2>/dev/null || true)"
-          if [ -z "$existing" ]; then
-            gh api --method POST "repos/$GH_REPO/git/refs" -f ref=refs/tags/v0.2.0 -f sha="$RELEASE_SHA"
-          elif [ "$existing" != "$RELEASE_SHA" ]; then
-            echo "Existing v0.2.0 tag points to another object; refusing to change it." >&2
-            exit 1
-          fi
-          gh release create v0.2.0 dist/* --verify-tag --title "Legal Markdown Organizer 0.2.0" --notes-file docs/releases/v0.2.0.md
+        run: bash .github/scripts/publish-release.sh
