@@ -4,10 +4,11 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
-from legal_organizer import organizer
+from legal_organizer import filesystem, organizer
 from legal_organizer.filesystem import SafeRoot, identity
 from legal_organizer.history import get_history
 from legal_organizer.organizer import organize_directory, undo_last
@@ -297,3 +298,29 @@ def test_read_failure_is_recorded_and_other_documents_continue(tmp_path: Path, m
     assert len(result.errors) == 1 and len(result.moves) == 1
     assert source.exists() and (tmp_path / "Sentencas" / "sentenca.md").exists()
     assert get_history(tmp_path)[0].status == "partial"
+
+
+@pytest.mark.parametrize("field", ["st_ctime_ns", "st_mtime_ns", "st_size", "st_ino"])
+def test_windows_path_and_handle_timestamp_compatibility(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, field: str,
+) -> None:
+    """Model Windows' stat/fstat ctime discrepancy on every CI platform."""
+    path = write_document(tmp_path)
+    root = SafeRoot(tmp_path)
+    read_stat = root.stat
+
+    def path_stat(file):
+        info = read_stat(file)
+        attributes = {name: getattr(info, name) for name in (
+            "st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns", "st_mode",
+        )}
+        attributes[field] += 1
+        return SimpleNamespace(**attributes)
+
+    monkeypatch.setattr(root, "stat", path_stat)
+    monkeypatch.setattr(filesystem, "sys", SimpleNamespace(platform="win32"))
+    if field == "st_ctime_ns":
+        assert root.fingerprint(path).size == path.stat().st_size
+    else:
+        with pytest.raises(OSError):
+            root.fingerprint(path)

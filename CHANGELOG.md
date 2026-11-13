@@ -24,6 +24,8 @@
 - Copies are flushed, hashed and journaled before removing source files.
 - Windows timestamps are preserved through the open file handle, without relying
   on unsupported `utime` options or reopening destination paths.
+- Windows change-time checks consistently use open handles, avoiding CPython's
+  path/handle timestamp discrepancy while retaining identity, mtime and hash checks.
 - Journal failures stop the execution instead of continuing with unrecorded
   movements. Incomplete executions must be reviewed before organizing again.
 - Summaries include skipped entries, execution IDs and pending restore errors.

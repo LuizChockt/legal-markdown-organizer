@@ -164,9 +164,16 @@ class SafeRoot:
                 hasher.update(block)
             digest = hasher.hexdigest()
             after = os.fstat(stream.fileno())
-        if _signature(before) != _signature(after) or _signature(self.stat(path)) != _signature(after):
+        by_path = _signature(self.stat(path))
+        by_handle = _signature(after)
+        # CPython on Windows may report creation time for lstat().st_ctime,
+        # but change time for fstat().st_ctime (python/cpython#157671). Keep
+        # change-time checks between HANDLE observations; compare the path's
+        # identity, size and mtime through the fields with consistent meaning.
+        path_matches = by_path[:4] == by_handle[:4] if sys.platform == "win32" else by_path == by_handle
+        if _signature(before) != by_handle or not path_matches:
             raise OSError(f"File changed while reading; close editors and retry: {path}")
-        return Fingerprint(*_signature(after), digest)
+        return Fingerprint(*by_handle, digest)
 
     def verify(self, path: Path, expected: Fingerprint) -> None:
         if self.fingerprint(path) != expected:

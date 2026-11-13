@@ -46,6 +46,10 @@ Each fingerprint includes `device`, `inode`, `size`, `mtime_ns`, `ctime_ns` and
 states are `planned`, `created`, `copied`, `moved` and `aborted`. An undo transfer
 in `moved` state means restored (or a verified duplicate safely removed).
 
+Windows change-time fingerprints are consistently measured through open handles.
+Path/handle identity, size and modification time are also compared; their `ctime`
+fields are not mixed because of [CPython's Windows stat/fstat discrepancy](https://github.com/python/cpython/issues/157671).
+
 No document text is put into the manifest, but filenames, hashes and errors are
 private metadata. Do not attach manifests to public issues. They are neither
 backups nor cryptographically authenticated records. Do not hand-edit them.
