@@ -1,6 +1,9 @@
-include README.md README.pt-BR.md LICENSE CONTRIBUTING.md SECURITY.md
+include README.md README.pt-BR.md LICENSE CONTRIBUTING.md SECURITY.md CHANGELOG.md main.py
 recursive-include assets *.svg *.png
 recursive-include docs *.md *.txt
 recursive-include examples *.md
 recursive-include tests *.py
 recursive-include .github *.yml
+recursive-include .github/scripts *.py
+global-exclude *.py[cod]
+prune .legal-organizer

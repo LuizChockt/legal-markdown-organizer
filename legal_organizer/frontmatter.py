@@ -2,6 +2,7 @@
 
 import re
 from pathlib import Path
+from typing import TextIO
 
 
 def _read_scalar(value: str) -> str | None:
@@ -30,20 +31,25 @@ def read_frontmatter(file_path: Path) -> dict[str, str]:
     values are ignored. Missing or unclosed headers return an empty dict.
     Filesystem and decoding errors are left to the caller; no file is edited.
     """
-    metadata: dict[str, str] = {}
     with file_path.open("r", encoding="utf-8-sig") as document:
-        if document.readline().strip() != "---":
-            return {}
-        for line in document:
-            if line.rstrip() == "---":
-                return metadata
-            if line[:1].isspace() or ":" not in line:
-                continue
-            key, _, raw_value = line.partition(":")
-            key = key.strip()
-            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", key):
-                continue
-            value = _read_scalar(raw_value)
-            if value is not None:
-                metadata[key] = value
+        return read_frontmatter_stream(document)
+
+
+def read_frontmatter_stream(document: TextIO) -> dict[str, str]:
+    """Parse the same header from an already safely opened text stream."""
+    metadata: dict[str, str] = {}
+    if document.readline().strip() != "---":
+        return {}
+    for line in document:
+        if line.rstrip() == "---":
+            return metadata
+        if line[:1].isspace() or ":" not in line:
+            continue
+        key, _, raw_value = line.partition(":")
+        key = key.strip()
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", key):
+            continue
+        value = _read_scalar(raw_value)
+        if value is not None:
+            metadata[key] = value
     return {}

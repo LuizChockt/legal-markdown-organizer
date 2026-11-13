@@ -17,6 +17,7 @@ def test_help_describes_available_options(capsys: pytest.CaptureFixture[str]) ->
     assert "PATH" in output
     assert "--dry-run" in output
     assert "--include-txt" in output
+    assert "--history" in output and "--undo-last" in output
 
 
 def test_missing_directory_exits_with_usage_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -120,3 +121,68 @@ def test_checkout_dry_run_does_not_create_python_caches(tmp_path: Path) -> None:
     )
     assert result.returncode == 0, result.stderr
     assert {path.relative_to(checkout) for path in checkout.rglob("*")} == before
+
+
+def test_history_and_undo_cli(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    document = tmp_path / "agravo.md"
+    document.write_bytes(b"# Fictional\n")
+    assert main([str(tmp_path), "--history"]) == 0
+    assert "No organization history" in capsys.readouterr().out
+    assert main([str(tmp_path)]) == 0
+    capsys.readouterr()
+    assert main([str(tmp_path), "--history"]) == 0
+    assert "completed" in capsys.readouterr().out
+    assert main([str(tmp_path), "--undo-last", "--dry-run"]) == 0
+    assert "would be restored" in capsys.readouterr().out
+    assert not document.exists()
+    assert main([str(tmp_path), "--undo-last"]) == 0
+    assert "Undo completed" in capsys.readouterr().out
+    assert document.read_bytes() == b"# Fictional\n"
+    assert main([str(tmp_path), "--undo-last"]) == 0
+    assert "No organization to undo" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("arguments", [
+    ["--history", "--undo-last"], ["--history", "--dry-run"],
+    ["--history", "--include-txt"], ["--undo-last", "--include-txt"],
+])
+def test_incompatible_options_do_not_modify_files(tmp_path: Path, arguments: list[str]) -> None:
+    before = list(tmp_path.iterdir())
+    with pytest.raises(SystemExit) as error:
+        main([str(tmp_path), *arguments])
+    assert error.value.code == 2
+    assert list(tmp_path.iterdir()) == before
+
+
+def test_undo_conflict_exits_one_and_reports_incomplete(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    document = tmp_path / "agravo.md"
+    document.write_bytes(b"# Fictional\n")
+    assert main([str(tmp_path)]) == 0
+    document.write_bytes(b"Unrelated occupant")
+    assert main([str(tmp_path), "--undo-last"]) == 1
+    assert "Undo incomplete" in capsys.readouterr().out
+    assert document.read_bytes() == b"Unrelated occupant"
+
+
+def test_invalid_history_exits_one_with_actionable_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    (tmp_path / "agravo.md").write_bytes(b"# Fictional\n")
+    main([str(tmp_path)])
+    next((tmp_path / ".legal-organizer").glob("*.json")).write_bytes(b"{")
+    assert main([str(tmp_path), "--history"]) == 1
+    assert "Invalid or unreadable history" in capsys.readouterr().err
+
+
+def test_relative_path_round_trip_through_real_entrypoint(tmp_path: Path) -> None:
+    base = tmp_path / "fictional notes"
+    base.mkdir()
+    source = base / "agravo.md"
+    source.write_bytes(b"# Fictional\r\n")
+    script = Path(__file__).resolve().parents[1] / "main.py"
+    for options in [["--dry-run"], [], ["--history"], ["--undo-last", "--dry-run"], ["--undo-last"]]:
+        result = subprocess.run(
+            [sys.executable, str(script), "fictional notes", *options], cwd=tmp_path,
+            capture_output=True, text=True, timeout=30,
+            env={**os.environ, "PYTHONUTF8": "1", "PYTHONDONTWRITEBYTECODE": "1"},
+        )
+        assert result.returncode == 0, result.stderr
+    assert source.read_bytes() == b"# Fictional\r\n"

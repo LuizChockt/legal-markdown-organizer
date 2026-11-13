@@ -246,3 +246,5 @@ backups/
 .DS_Store
 Thumbs.db
 Desktop.ini
+# Private local execution history, including in nested example collections.
+.legal-organizer/
