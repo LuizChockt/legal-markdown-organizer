@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from legal_organizer.filesystem import SafeRoot
 from legal_organizer.organizer import available_destination, organize_directory
 
 
@@ -194,7 +195,7 @@ def test_metadata_copy_failure_keeps_source(tmp_path: Path, monkeypatch: pytest.
     def fail_stat(*args, **kwargs) -> None:
         raise OSError("Simulated metadata copy failure")
 
-    monkeypatch.setattr(shutil, "copystat", fail_stat)
+    monkeypatch.setattr(SafeRoot, "preserve_metadata", fail_stat)
     result = organize_directory(tmp_path)
     assert source.exists()
     assert not (tmp_path / "Agravos" / source.name).exists()
@@ -204,14 +205,14 @@ def test_metadata_copy_failure_keeps_source(tmp_path: Path, monkeypatch: pytest.
 def test_source_deletion_failure_retains_both_complete_copies(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     content = b"Complete original document"
     source = _write(tmp_path / "agravo.md", content)
-    original_unlink = Path.unlink
+    original_unlink = SafeRoot.unlink
 
-    def fail_source_unlink(path: Path, *args, **kwargs) -> None:
+    def fail_source_unlink(root: SafeRoot, path: Path, *args, **kwargs) -> None:
         if path == source:
             raise PermissionError("Simulated locked source")
-        original_unlink(path, *args, **kwargs)
+        original_unlink(root, path, *args, **kwargs)
 
-    monkeypatch.setattr(Path, "unlink", fail_source_unlink)
+    monkeypatch.setattr(SafeRoot, "unlink", fail_source_unlink)
     result = organize_directory(tmp_path)
     assert len(result.errors) == 1
     assert source.read_bytes() == content
@@ -221,18 +222,17 @@ def test_source_deletion_failure_retains_both_complete_copies(tmp_path: Path, mo
 def test_a_target_created_after_planning_is_never_overwritten(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     source = _write(tmp_path / "agravo.md", b"New document")
     destination = tmp_path / "Agravos" / source.name
-    original_open = Path.open
+    original_open = SafeRoot.open
     collision_created = False
 
-    def racing_open(path: Path, mode="r", *args, **kwargs):
+    def racing_open(root: SafeRoot, path: Path, mode="rb", *args, **kwargs):
         nonlocal collision_created
         if path == destination and mode == "xb" and not collision_created:
             collision_created = True
-            with original_open(path, "wb") as target:
-                target.write(b"Created by another operation")
-        return original_open(path, mode, *args, **kwargs)
+            path.write_bytes(b"Created by another operation")
+        return original_open(root, path, mode, *args, **kwargs)
 
-    monkeypatch.setattr(Path, "open", racing_open)
+    monkeypatch.setattr(SafeRoot, "open", racing_open)
     result = organize_directory(tmp_path)
     assert result.errors == []
     assert destination.read_bytes() == b"Created by another operation"
