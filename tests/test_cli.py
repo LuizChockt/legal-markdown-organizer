@@ -27,6 +27,19 @@ def test_missing_directory_exits_with_usage_error(tmp_path: Path, capsys: pytest
     assert "Directory does not exist" in capsys.readouterr().err
 
 
+def test_unresolvable_home_exits_with_usage_error(monkeypatch, capsys) -> None:
+    def no_home(path: Path) -> Path:
+        raise RuntimeError("Could not determine home directory.")
+
+    monkeypatch.setattr(Path, "expanduser", no_home)
+    with pytest.raises(SystemExit) as error:
+        main(["~/fictional-notes", "--dry-run"])
+    assert error.value.code == 2
+    message = capsys.readouterr().err
+    assert "Could not determine home directory" in message
+    assert "Traceback" not in message
+
+
 def test_missing_path_argument_exits_with_usage_error() -> None:
     with pytest.raises(SystemExit) as error:
         main([])
