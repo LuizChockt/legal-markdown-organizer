@@ -8,7 +8,7 @@
 
 # Legal Markdown Organizer
 
-[Português brasileiro](./README.pt-BR.md) · [Full reference](./docs/reference.md) · [Dry-run output](./docs/demo.txt)
+**Language:** English · [Português (Brasil)](./README.pt-BR.md) · [Full reference](./docs/reference.md) · [Dry-run output](./docs/demo.txt)
 
 [![Tests](https://github.com/LuizChockt/legal-markdown-organizer/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/LuizChockt/legal-markdown-organizer/actions/workflows/tests.yml)
 
