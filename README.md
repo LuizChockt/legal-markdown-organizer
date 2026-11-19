@@ -1,9 +1,9 @@
 <picture>
   <source media="(prefers-color-scheme: dark) and (max-width: 600px)" srcset="./assets/cover-mobile-dark.svg">
   <source media="(max-width: 600px)" srcset="./assets/cover-mobile-light.svg">
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/cover-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="./assets/cover-light.svg">
-  <img src="./assets/cover-light.svg" alt="Legal Markdown Organizer — deterministic local organization, dry-run and document byte preservation." width="1200">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/identity/cover.webp">
+  <source media="(prefers-color-scheme: light)" srcset="./assets/identity/cover.webp">
+  <img src="./assets/identity/cover.webp" alt="Legal Markdown Organizer — deterministic local organization, dry-run and document byte preservation." width="1200">
 </picture>
 
 # Legal Markdown Organizer
