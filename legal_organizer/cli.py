@@ -77,7 +77,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("--history is already read-only; do not combine it with --dry-run or --include-txt.")
     if args.undo_last and args.include_txt:
         parser.error("--undo-last uses the recorded files; do not combine it with --include-txt.")
-    directory = args.path.expanduser().absolute()
+    try:
+        directory = args.path.expanduser().absolute()
+    except (OSError, RuntimeError) as error:
+        parser.error(str(error))
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
     try:
