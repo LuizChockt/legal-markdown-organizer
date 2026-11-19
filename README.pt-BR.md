@@ -1,10 +1,4 @@
-<picture>
-  <source media="(prefers-color-scheme: dark) and (max-width: 600px)" srcset="./assets/cover-mobile-dark-pt-BR.svg">
-  <source media="(max-width: 600px)" srcset="./assets/cover-mobile-light-pt-BR.svg">
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/cover-dark-pt-BR.svg">
-  <source media="(prefers-color-scheme: light)" srcset="./assets/cover-light-pt-BR.svg">
-  <img src="./assets/cover-light-pt-BR.svg" alt="Legal Markdown Organizer — organização local por regras, dry-run e preservação dos bytes dos documentos." width="1200">
-</picture>
+<img src="./assets/identity/cover-premium.webp" alt="Legal Markdown Organizer — organização local por regras, dry-run e preservação dos bytes dos documentos." width="1200">
 
 # Legal Markdown Organizer
 
